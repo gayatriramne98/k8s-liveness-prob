@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: liveness-demo
+  labels:
+    app: liveness-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: liveness-demo
+  template:
+    metadata:
+      labels:
+        app: liveness-demo
+    spec:
+      containers:
+        - name: healthapp
+          image: <your-dockerhub-username>/liveness-demo:v1
+          ports:
+            - containerPort: 5000
+          env:
+            - name: AUTO_FAIL_AFTER
+              value: "45"        # app turns "unhealthy" 45s after it starts
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 5000
+            initialDelaySeconds: 10   # wait 10s after container start before first probe
+            periodSeconds: 5          # probe every 5s
+            timeoutSeconds: 2         # probe must respond within 2s
+            failureThreshold: 3       # 3 consecutive failures = restart
+            successThreshold: 1       # 1 success = considered healthy again
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: liveness-demo-svc
+spec:
+  selector:
+    app: liveness-demo
+  ports:
+    - port: 80
+      targetPort: 5000
+  type: ClusterIP
